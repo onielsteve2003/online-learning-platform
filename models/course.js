@@ -12,6 +12,7 @@ const courseSchema = new Schema({
     },
     content: {
         type: String,
+        default: ''
     },
     instructor: {
         type: mongoose.Schema.Types.ObjectId,
@@ -27,6 +28,15 @@ const courseSchema = new Schema({
     maxStudents: {
         type: Number,
         default: 5
+    },
+    category: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: true
+    },
+    duration: {
+        type: String,
+        required: true
     },
     createdAt: {
         type: Date,

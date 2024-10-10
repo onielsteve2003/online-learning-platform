@@ -14,7 +14,9 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: true
+        required: function(){
+            return !this.googleId && !this.facebookId
+        }
     },
     role: {
         type: String,
@@ -22,10 +24,12 @@ const userSchema = new Schema({
         default: 'student'
     },
     googleId: {
-        type: String
+        type: String,
+        default: null
     },
     facebookId: {
-        type: String
+        type: String,
+        default: null
     }
 }, {timestamps: true})
 

@@ -1,43 +1,66 @@
 const Course = require('../models/course')
+const Category = require('../models/Category')
 
 // Create a new course (Instructor only)
-const createCourse = async(req, res) => {
+const createCourse = async (req, res) => {
     try {
-        const {title, description, content, maxStudents = 5} = req.body
+        console.log(req.user._id); // Check if req.user exists
+        const { title, description, content, maxStudents, category, duration } = req.body;
 
         // Validate that the user is an instructor
         if (req.user.role !== 'instructor') {
             return res.status(403).json({
                 code: 403,
                 message: 'Only instructors can create courses'
-            })
+            });
         }
 
-        // Create a new course with the instructor as the creator
+        // Check if required fields are present
+        if (!title || !description || !category || !duration) {
+            return res.status(400).json({
+                code: 400,
+                message: 'Title, description, category, and duration are required to create a course'
+            });
+        }
+
+        // Check if the category exists
+        const existingCategory = await Category.findById(category);
+        if (!existingCategory) {
+            return res.status(400).json({
+                code: 400,
+                message: 'Invalid category'
+            });
+        }
+
+        // Create a new course
         const course = new Course({
             title,
             description,
-            content,
-            // req.user is the authenticated user
+            content: content || '',  // Fallback to empty string if content is not provided
             instructor: req.user._id,
-            maxStudents: maxStudents || 5
-        })
+            maxStudents: maxStudents || 5,  // Default to 5 if maxStudents is not provided
+            category,
+            duration
+        });
 
-        await course.save()
+        // Save the course to the database
+        await course.save();
 
+        // Send back a success response with the created course
         res.status(201).json({
             code: 201,
             message: 'Course created successfully',
             data: course
-        })
+        });
     } catch (err) {
+        // Handle any server-side errors
         res.status(500).json({
             code: 500,
             message: 'Error creating course',
             error: err.message
-        })
+        });
     }
-}
+};
 
 // Enroll in a course (Student only)
 const enrollInCourse = async(req, res) => {

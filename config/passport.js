@@ -8,8 +8,13 @@ passport.serializeUser((user, done) => {
     done(null, user.id)
 })
 
-passport.deserializeUser((id, done) => {
-    User.findById(id, (err, user) => done(err, user))
+passport.deserializeUser(async(id, done) => {
+    try {
+        const user = await User.findById(id)
+        done(null, user)
+    } catch (err) {
+        done(err, null);
+    }
 })
 
 // Google OAuth Strategy
@@ -18,14 +23,14 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: '/auth/google/callback'
+            callbackURL: '/api/auth/google/callback'
         },
         async(accessToken, refreshToken, profile, done) => {
             try {
                 let user = await User.findOne({ googleId: profile.id })
 
                 if(!user) {
-                    user = new user({
+                    user = new User({
                         name: profile.displayName,
                         // Some profiles do not return emails
                         email: profile.emails[0].value,
@@ -48,7 +53,7 @@ passport.use(
         {
             clientID: process.env.FACEBOOK_APP_ID,
             clientSecret: process.env.FACEBOOK_APP_SECRET,
-            callbackURL: '/auth/facebook/callback',
+            callbackURL: '/api/auth/facebook/callback',
             // Request specific fields from facebook
             profileFields: ['id', 'email', 'name']
         },

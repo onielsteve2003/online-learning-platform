@@ -1,20 +1,33 @@
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const User = require('../models/user')
 
 // Protect routes
-const protect = (req, res, next) => {
-    const token = req.headers.authorization && req.headers.authorization.split(' ')[1]
+const protect = async (req, res, next) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
 
-    if(!token) {
-        return res.status(401).json({ code: 401, message: 'Token not provided' })
+    if (!token) {
+        return res.status(401).json({ code: 401, message: 'Token not provided' });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        req.user = decoded
-        next()
-    } catch (error) {
-        res.status(500).json({ code: 500, message: 'Not authorized, Invalid token' })
-    }
-}
+        // Verify Token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-module.exports = protect
+        // Fetch user by decoded userId
+        const userAcc = await User.findById(decoded.userId);
+        if (!userAcc || userAcc.suspended || userAcc.deleted) {
+            return res.status(401).json({ code: 401, message: 'Unauthorized user' });
+        }
+
+        // Attach user to request object
+        req.user = userAcc;
+        next();
+    } catch (err) {
+        console.error("JWT Verification Error:", err);
+        return res.status(403).json({ code: 403, message: 'Invalid or expired token' });
+    }
+};
+
+module.exports = protect;
+

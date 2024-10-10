@@ -10,7 +10,7 @@ const {
 
 // Example: Only instructors can create a course 
 router.post('/create', protect, checkRole('instructor'), createCourse)
-router.post('/:id/enroll', protect, checkRole('student'), enrollInCourse)
-router.delete('/:id', protect, checkRole('admin'), deleteCourse)
+router.post('/:courseId/enroll', protect, checkRole('student'), enrollInCourse)
+router.delete('/:courseId', protect, checkRole('admin'), deleteCourse)
 
 module.exports = router
