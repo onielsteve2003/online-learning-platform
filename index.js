@@ -5,7 +5,7 @@ const http = require('http')
 const app = express()
 const morgan = require('morgan')
 const session = require('express-session')
-const passport = require('passport')
+const passport = require('./config/passport')
 require('./config/passport')
 
 app.use(express.json())
@@ -24,6 +24,9 @@ app.use(passport.session())
 
 // Route
 require('./routes/api/index.routes')(app)
+
+// Export the app for testing
+module.exports = app;
 
 const server = http.Server(app)
 const port = process.env.PORT || 3000

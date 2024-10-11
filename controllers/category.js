@@ -1,4 +1,4 @@
-const Category = require('../models/Category')
+const Category = require('../models/Category');
 
 const allowedCategories = [
     'Web Development',
@@ -14,54 +14,54 @@ const allowedCategories = [
 ];
 
 // Create a category
-const createCategory = async(req, res) => {
+const createCategory = async (req, res) => {
     try {
-        const { name } = req.body
+        const { name } = req.body;
 
-        if(!name) {
+        // Validate category name
+        if (!name) {
             return res.status(400).json({
                 code: 400,
                 message: 'Name is required'
-            })
+            });
         }
 
-        // Check if the name matches the allowed categories
-        if(!allowedCategories.includes(name)) {
+        // Check if name is part of allowed categories
+        if (!allowedCategories.includes(name)) {
             return res.status(400).json({
                 code: 400,
-                message: 'Invalid category name'
-            })
+                message: `'${name}' is not an allowed category`
+            });
         }
 
-        // Check if the category exists
-        let existingCategory = await Category.findOne({ name })
-        if(existingCategory) {
+        // Check if the category already exists
+        const existingCategory = await Category.findOne({ name });
+        if (existingCategory) {
             return res.status(400).json({
                 code: 400,
                 message: 'Category already exists'
-            })
+            });
         }
 
         // Create a new category
-        const category = new Category({
-            name
-        })
+        const category = await Category.create({ name });
 
-        await category.save()
-
-        res.status(201).json({
+        return res.status(201).json({
             code: 201,
             message: 'Category created successfully',
-            category
-        })
+            category: {
+                name: category.name
+            }
+        });
     } catch (err) {
+        console.error('Error in createCategory controller:', err);
         return res.status(500).json({
             code: 500,
             message: 'Server Error',
             error: err.message
-        })
+        });
     }
-}
+};
 
 module.exports = {
     createCategory
