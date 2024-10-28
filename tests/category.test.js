@@ -1,4 +1,4 @@
-const { createCategory } = require('../controllers/category');
+const { createCategory, getAllCategories, deleteCategory } = require('../controllers/category');
 const Category = require('../models/Category');
 
 // Mock the Category model
@@ -80,3 +80,112 @@ describe('createCategory Controller', () => {
         });
     });
 });
+
+describe('getAllCategories Controller', () => {
+    let req, res;
+
+    beforeEach(() => {
+        req = {};
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn()
+        };
+
+        Category.find = jest.fn();
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should return 200 and a list of categories', async () => {
+        const mockCategories = [{ name: 'Web Development' }, { name: 'Data Science' }];
+        Category.find.mockResolvedValueOnce(mockCategories);
+
+        await getAllCategories(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            code: 200,
+            message: 'Categories retrieved successfully',
+            data: mockCategories
+        });
+    });
+
+    it('should return 500 if there is a server error', async () => {
+        Category.find.mockRejectedValueOnce(new Error('Database Error'));
+
+        await getAllCategories(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({
+            code: 500,
+            message: 'Server Error',
+            error: 'Database Error'
+        });
+    });
+});
+
+describe('deleteCategory Controller', () => {
+    let req, res;
+
+    beforeEach(() => {
+        req = {
+            params: { categoryId: 'category_id' }, // Mock category ID
+            user: {
+                _id: 'admin_id',  // Mock admin ID
+                role: 'admin'     // Set user role as admin
+            }
+        };
+        res = {
+            status: jest.fn().mockReturnThis(),
+            json: jest.fn()
+        };
+
+        Category.findByIdAndDelete = jest.fn(); // Mock the deletion method
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should delete the category successfully if it exists', async () => {
+        const mockCategory = { _id: 'category_id', name: 'Web Development' };
+        Category.findByIdAndDelete.mockResolvedValueOnce(mockCategory); // Simulate successful deletion
+
+        await deleteCategory(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            code: 200,
+            message: 'Category deleted successfully'
+        });
+    });
+
+    it('should return 404 if the category is not found', async () => {
+        Category.findByIdAndDelete.mockResolvedValueOnce(null); // Simulate category not found
+
+        await deleteCategory(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({
+            code: 404,
+            message: 'Category not found'
+        });
+    });
+
+    it('should return 500 if there is a server error', async () => {
+        Category.findByIdAndDelete.mockRejectedValueOnce(new Error('Database Error')); // Simulate server error
+
+        await deleteCategory(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({
+            code: 500,
+            message: 'Server Error',
+            error: 'Database Error'
+        });
+    });
+});
+
+

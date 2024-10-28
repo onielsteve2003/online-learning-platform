@@ -63,6 +63,56 @@ const createCategory = async (req, res) => {
     }
 };
 
+// delete a category
+const deleteCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+
+        const deletedCategory = await Category.findByIdAndDelete(categoryId);
+
+        if (!deletedCategory) {
+            return res.status(404).json({
+                code: 404,
+                message: 'Category not found'
+            });
+        }
+
+        return res.status(200).json({
+            code: 200,
+            message: 'Category deleted successfully'
+        });
+    } catch (err) {
+        console.error('Error in deleteCategory controller:', err);
+        return res.status(500).json({
+            code: 500,
+            message: 'Server Error',
+            error: err.message
+        });
+    }
+};
+
+// Get all categories
+const getAllCategories = async (req, res) => {
+    try {
+        const categories = await Category.find(); // Fetch all categories from the database
+
+        return res.status(200).json({
+            code: 200,
+            message: 'Categories retrieved successfully',
+            data: categories
+        });
+    } catch (err) {
+        console.error('Error in getAllCategories controller:', err);
+        return res.status(500).json({
+            code: 500,
+            message: 'Server Error',
+            error: err.message
+        });
+    }
+};
+
 module.exports = {
-    createCategory
+    createCategory,
+    deleteCategory,
+    getAllCategories
 };
