@@ -4,7 +4,6 @@ const Category = require('../models/Category')
 // Create a new course (Instructor only)
 const createCourse = async (req, res) => {
     try {
-        console.log(req.user._id); // Check if req.user exists
         const { title, description, content, maxStudents, category, duration } = req.body;
 
         // Validate that the user is an instructor
@@ -32,6 +31,15 @@ const createCourse = async (req, res) => {
             });
         }
 
+        // Check for duplicate course in the same category
+        const existingCourse = await Course.findOne({ title, category });
+        if (existingCourse) {
+            return res.status(400).json({
+                code: 400,
+                message: 'A course with this title already exists in this category'
+            });
+        }
+
         // Create a new course
         const course = new Course({
             title,
@@ -44,13 +52,13 @@ const createCourse = async (req, res) => {
         });
 
         // Save the course to the database
-        await course.save();
+        const savedCourse = await course.save();
 
         // Send back a success response with the created course
         res.status(201).json({
             code: 201,
             message: 'Course created successfully',
-            data: course
+            data: savedCourse
         });
     } catch (err) {
         // Handle any server-side errors
@@ -63,100 +71,77 @@ const createCourse = async (req, res) => {
 };
 
 // Enroll in a course (Student only)
-const enrollInCourse = async(req, res) => {
+const enrollInCourse = async (req, res) => {
     try {
-        const courseId = req.params.courseId
-
-        // Validate that the user is a student
         if (req.user.role !== 'student') {
-            return res.status(403).json({
-                code: 403,
-                message: 'Only students can enroll in courses'
-            })
+            return res.status(403).json({ code: 403, message: 'Only students can enroll in courses' });
         }
 
-        // Find the course by ID
-        const course = await Course.findById(courseId)
-
-        if(!course) {
-            return res.status(404).json({
-                code: 404,
-                message: 'Course not found'
-            })
+        const course = await Course.findById(req.params.courseId);
+        if (!course) {
+            return res.status(404).json({ code: 404, message: 'Course not found' });
         }
 
-        // Check if the course is already full
-        if(course.students.length >= course.maxStudents){ 
-            return res.status(400).json({
-                code: 400,
-                message: 'Course is already full'
-            })
+        if (course.students.includes(req.user._id.toString())) {
+            return res.status(400).json({ code: 400, message: 'You are already enrolled in this course' });
         }
 
-        // Check if the student is already enrolled
-        if(course.students.includes(req.user.id)){ 
-            return res.status(400).json({
-                code: 400,
-                message: 'You are already enrolled in this course'
-            })
+        if (course.students.length >= course.maxStudents) {
+            return res.status(400).json({ code: 400, message: 'Course is already full' });
         }
 
-        // Enroll the student in the course
-        course.students.push(req.user.id)
-        await course.save()
+        course.students.push(req.user._id);
+        await course.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             code: 200,
             message: 'Student enrolled successfully',
             data: course
-        })
-    } catch (err) {
-        res.status(500).json({
-            code: 500,
-            message: 'Error enrolling in course',
-            error: err.message
-        })
+        });
+    } catch (error) {
+        console.error('Error enrolling in course:', error);
+        return res.status(500).json({ code: 500, message: 'Error enrolling in course', error: error.message });
     }
-}
+};
 
 // Delete a course
-const deleteCourse = async(req, res) => {
+const deleteCourse = async (req, res) => {
     try {
-        const courseId = req.params.courseId
+        const courseId = req.params.courseId;
 
-        // Find the course ID
-        const course = await Course.findById(courseId)
+        // Find the course by ID
+        const course = await Course.findById(courseId);
 
-        if(!course) {
+        if (!course) {
             return res.status(404).json({
                 code: 404,
                 message: 'Course not found'
-            })
+            });
         }
 
-        // Check if the user is an admin or the instructor who created the course
-        if(req.user.role !== 'admin' && course.instructor.toString() !== req.user.id) {
+        // Check if the user is the instructor who created the course
+        if (course.instructor.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 code: 403,
-                message: 'Only admins or the instructor can delete courses'
-            })
+                message: 'Only the instructor who created the course can delete it'
+            });
         }
 
         // Delete the course
-        await Course.findByIdAndDelete(courseId)
+        await Course.findByIdAndDelete(courseId);
 
         return res.status(200).json({
             code: 200,
             message: 'Course deleted successfully'
-        })
+        });
     } catch (err) {
         return res.status(500).json({
             code: 500,
             message: 'Error deleting course',
             error: err.message
-        })
+        });
     }
-}
+};
 
 module.exports = {
     createCourse,
