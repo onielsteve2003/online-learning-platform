@@ -5,12 +5,14 @@ const protect = require('../../middleware/authMiddleware')
 const { 
     createCourse,
     enrollInCourse,
-    deleteCourse
+    deleteCourse,
+    updateCourse,
 } = require('../../controllers/courseController')
+const { upload } = require('../../middleware/multer')
 
-// Example: Only instructors can create a course 
-router.post('/create', protect, checkRole('instructor'), createCourse)
+router.post('/create', protect, checkRole('instructor'), upload.array('files'), createCourse)
 router.post('/:courseId/enroll', protect, checkRole('student'), enrollInCourse)
 router.delete('/:courseId', protect, checkRole('instructor'), deleteCourse)
+router.put('/:courseId', protect, checkRole('instructor'), upload.array('files'), updateCourse);
 
 module.exports = router

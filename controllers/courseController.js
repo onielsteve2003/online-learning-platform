@@ -1,71 +1,72 @@
 const Course = require('../models/course')
 const Category = require('../models/Category')
+const cloudinary = require('../config/cloudinary')
 
 // Create a new course (Instructor only)
 const createCourse = async (req, res) => {
     try {
         const { title, description, content, maxStudents, category, duration } = req.body;
 
-        // Validate that the user is an instructor
         if (req.user.role !== 'instructor') {
-            return res.status(403).json({
-                code: 403,
-                message: 'Only instructors can create courses'
-            });
+            return res.status(403).json({ code: 403, message: 'Only instructors can create courses' });
         }
 
-        // Check if required fields are present
         if (!title || !description || !category || !duration) {
-            return res.status(400).json({
-                code: 400,
-                message: 'Title, description, category, and duration are required to create a course'
-            });
+            return res.status(400).json({ code: 400, message: 'Title, description, category, and duration are required' });
         }
 
-        // Check if the category exists
         const existingCategory = await Category.findById(category);
         if (!existingCategory) {
-            return res.status(400).json({
-                code: 400,
-                message: 'Invalid category'
-            });
+            return res.status(400).json({ code: 400, message: 'Invalid category' });
         }
 
-        // Check for duplicate course in the same category
         const existingCourse = await Course.findOne({ title, category });
         if (existingCourse) {
-            return res.status(400).json({
-                code: 400,
-                message: 'A course with this title already exists in this category'
-            });
+            return res.status(400).json({ code: 400, message: 'A course with this title already exists in this category' });
         }
 
-        // Create a new course
+        let multimedia = [];
+
+        if (req.files && req.files.length) {
+            multimedia = await Promise.all(req.files.map(async file => {
+                try {
+                    const result = await cloudinary.uploader.upload(file.path, { resource_type: 'auto' });
+                    return {
+                        url: result.secure_url,
+                        type: file.mimetype.startsWith('image/') ? 'image' :
+                              file.mimetype.startsWith('video/') ? 'video' :
+                              file.mimetype === 'application/pdf' ? 'pdf' :
+                              'other'
+                    };
+                } catch (uploadError) {
+                    console.error('File path:', file.path);
+                    console.error('File mimetype:', file.mimetype);
+                    console.error('Error uploading to Cloudinary:', JSON.stringify(uploadError, null, 2));
+                    throw new Error(uploadError.message || 'File upload failed');
+                }
+            }));
+        }
+
         const course = new Course({
             title,
             description,
-            content: content || '',  // Fallback to empty string if content is not provided
+            content: content || '',
             instructor: req.user._id,
-            maxStudents: maxStudents || 5,  // Default to 5 if maxStudents is not provided
+            maxStudents: maxStudents || 100,
             category,
-            duration
+            duration,
+            multimedia
         });
 
-        // Save the course to the database
         const savedCourse = await course.save();
 
-        // Send back a success response with the created course
-        res.status(201).json({
-            code: 201,
-            message: 'Course created successfully',
-            data: savedCourse
-        });
+        res.status(201).json({ code: 201, message: 'Course created successfully', data: savedCourse });
     } catch (err) {
-        // Handle any server-side errors
+        console.error('Error creating course:', JSON.stringify(err, null, 2));
         res.status(500).json({
             code: 500,
             message: 'Error creating course',
-            error: err.message
+            error: err.message || JSON.stringify(err)
         });
     }
 };
@@ -143,8 +144,72 @@ const deleteCourse = async (req, res) => {
     }
 };
 
+const updateCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { title, description, content, maxStudents, category, duration } = req.body;
+
+        // Find the course
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({
+                code: 404,
+                message: 'Course not found'
+            });
+        }
+
+        // Check if the user is the instructor
+        if (!course.instructor.equals(req.user._id)) {
+            return res.status(403).json({
+                code: 403,
+                message: 'Only the instructor who created the course can update it'
+            });
+        }
+
+        // Update the course fields
+        course.title = title || course.title;
+        course.description = description || course.description;
+        course.content = content || course.content;
+        course.maxStudents = maxStudents !== undefined ? maxStudents : course.maxStudents; // Ensure maxStudents can be updated
+        course.category = category || course.category;
+        course.duration = duration || course.duration;
+
+        // Handle multimedia uploads if new files are uploaded
+        if (req.files && req.files.length) {
+            const multimedia = await Promise.all(req.files.map(async file => {
+                const result = await cloudinary.uploader.upload(file.path, { resource_type: 'auto' });
+                return {
+                    url: result.secure_url,
+                    type: file.mimetype.startsWith('image/') ? 'image' :
+                          file.mimetype.startsWith('video/') ? 'video' :
+                          file.mimetype === 'application/pdf' ? 'pdf' :
+                          (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.mimetype === 'application/msword') ? 'docx' :
+                          'other' // Default type for any other files
+                };
+            }));
+            course.multimedia = multimedia; // Update multimedia
+        }
+
+        // Save the updated course
+        const updatedCourse = await course.save();
+
+        res.status(200).json({
+            code: 200,
+            message: 'Course updated successfully',
+            data: updatedCourse
+        });
+    } catch (err) {
+        res.status(500).json({
+            code: 500,
+            message: 'Error updating course',
+            error: err.message
+        });
+    }
+};
+
 module.exports = {
     createCourse,
     enrollInCourse,
-    deleteCourse
+    deleteCourse,
+    updateCourse
 }

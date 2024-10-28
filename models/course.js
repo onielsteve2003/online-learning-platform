@@ -14,6 +14,17 @@ const courseSchema = new Schema({
         type: String,
         default: ''
     },
+    multimedia: [{
+        url: {
+            type: String,
+            required: true
+        },
+        type: {
+            type: String,
+            enum: ['image', 'video', 'pdf'],
+            required: true
+        }
+    }],
     instructor: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -27,7 +38,7 @@ const courseSchema = new Schema({
     ],
     maxStudents: {
         type: Number,
-        default: 5
+        default: 100
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
