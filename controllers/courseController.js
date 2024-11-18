@@ -291,6 +291,7 @@ const deleteLessonInModule = async (req, res) => {
     try {
         const { courseId, moduleId, lessonId } = req.params;
 
+        // Fetch the course
         const course = await Course.findById(courseId);
         if (!course) {
             return res.status(404).json({
@@ -299,11 +300,15 @@ const deleteLessonInModule = async (req, res) => {
             });
         }
 
-        // Check if the user is the instructor or an admin
+        // **Early check for user authorization**
         if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(403).json({ code: 403, message: 'Only the instructor who created the course or an admin can delete a lesson' });
-        }
+            return res.status(403).json({ 
+                code: 403, 
+                message: 'Only the instructor who created the course or an admin can delete a lesson' 
+            });
+        }        
 
+        // Fetch the module
         const module = course.modules.find(m => m._id.toString() === moduleId);
         if (!module) {
             return res.status(404).json({
@@ -312,6 +317,7 @@ const deleteLessonInModule = async (req, res) => {
             });
         }
 
+        // Find the lesson within the module
         const lessonIndex = module.lessons.findIndex(l => l._id.toString() === lessonId);
         if (lessonIndex === -1) {
             return res.status(404).json({

@@ -2,7 +2,6 @@ const mongoose = require('mongoose')
 const httpMocks = require('node-mocks-http');
 const { 
     createCourse, 
-    enrollInCourse,
     deleteModuleFromCourse,
     deleteCourse,
     updateCourse,
@@ -11,9 +10,8 @@ const {
     getAllLessonsInCourse,
     getLessonById,
     getModuleById,
-    getCourseById
+    deleteLessonInModule
 } = require('../controllers/courseController');
-const { verifyCourseAccess } = require('../middleware/authMiddleware')
 const Course = require('../models/Course');
 
 jest.mock('../models/Course');
@@ -837,6 +835,142 @@ describe('getModuleById', () => {
             code: 500,
             message: 'Error retrieving module',
             error: errorMessage,
+        });
+    });
+});
+
+describe('deleteLessonInModule', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+        req = httpMocks.createRequest({
+            params: {
+                courseId: new mongoose.Types.ObjectId().toString(),
+                moduleId: new mongoose.Types.ObjectId().toString(),
+                lessonId: new mongoose.Types.ObjectId().toString(),
+            },
+            user: { 
+                _id: new mongoose.Types.ObjectId().toString(),
+                role: 'instructor',  // Default to instructor for permission checks
+            },
+        });
+        res = httpMocks.createResponse();
+        next = jest.fn();
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should return 404 if course is not found', async () => {
+        Course.findById.mockResolvedValue(null); // Simulate course not found
+
+        await deleteLessonInModule(req, res, next);
+
+        expect(res.statusCode).toBe(404);
+        expect(res._getJSONData()).toEqual({
+            code: 404,
+            message: 'Course not found'
+        });
+    });
+
+    it('should return 403 if user is neither instructor nor admin', async () => {
+        req.user.role = 'student'; // Set user role to student (non-instructor)
+        
+        // Create a mock course where the instructor is a different user (e.g., instructor1)
+        const mockCourse = {
+            _id: req.params.courseId,
+            instructor: new mongoose.Types.ObjectId().toString(), // Different instructor ID
+            modules: [{ _id: req.params.moduleId, lessons: [] }],
+        };
+    
+        // Mock course retrieval - simulate fetching a course with a different instructor
+        Course.findById.mockResolvedValue(mockCourse);
+        
+        await deleteLessonInModule(req, res, next);
+    
+        // We expect a 403 Forbidden since the student is not allowed to delete the lesson
+        expect(res.statusCode).toBe(403); 
+        expect(res._getJSONData()).toEqual({
+            code: 403,
+            message: 'Only the instructor who created the course or an admin can delete a lesson'
+        });
+    });       
+
+    it('should return 404 if module is not found', async () => {
+        const mockCourse = {
+            _id: req.params.courseId,
+            instructor: req.user._id,
+            modules: [], // No modules in the course
+        };
+
+        Course.findById.mockResolvedValue(mockCourse); // Mock course retrieval
+
+        await deleteLessonInModule(req, res, next);
+
+        expect(res.statusCode).toBe(404);
+        expect(res._getJSONData()).toEqual({
+            code: 404,
+            message: 'Module not found'
+        });
+    });
+
+    it('should return 404 if lesson is not found in the module', async () => {
+        const mockCourse = {
+            _id: req.params.courseId,
+            instructor: req.user._id,
+            modules: [{
+                _id: req.params.moduleId,
+                lessons: [{ _id: new mongoose.Types.ObjectId().toString() }] // Different lesson ID
+            }],
+        };
+
+        Course.findById.mockResolvedValue(mockCourse); // Mock course retrieval
+
+        await deleteLessonInModule(req, res, next);
+
+        expect(res.statusCode).toBe(404);
+        expect(res._getJSONData()).toEqual({
+            code: 404,
+            message: 'Lesson not found'
+        });
+    });
+
+    it('should return 200 if lesson is deleted successfully', async () => {
+        const lessonId = req.params.lessonId;
+        const mockCourse = {
+            _id: req.params.courseId,
+            instructor: req.user._id,
+            modules: [{
+                _id: req.params.moduleId,
+                lessons: [{ _id: lessonId, title: 'Sample Lesson' }]
+            }],
+            save: jest.fn().mockResolvedValue(true) // Mock save method to simulate success
+        };
+
+        Course.findById.mockResolvedValue(mockCourse); // Mock course retrieval
+
+        await deleteLessonInModule(req, res, next);
+
+        expect(res.statusCode).toBe(200);
+        expect(res._getJSONData()).toEqual({
+            code: 200,
+            message: 'Lesson deleted successfully'
+        });
+        expect(mockCourse.save).toHaveBeenCalledTimes(1); // Ensure the course was saved after deletion
+    });
+
+    it('should handle errors and return 500 if there is an internal server error', async () => {
+        const errorMessage = 'Database error';
+        Course.findById.mockRejectedValue(new Error(errorMessage)); // Simulate DB error
+
+        await deleteLessonInModule(req, res, next);
+
+        expect(res.statusCode).toBe(500);
+        expect(res._getJSONData()).toEqual({
+            code: 500,
+            message: 'Error deleting lesson',
+            error: errorMessage
         });
     });
 });
