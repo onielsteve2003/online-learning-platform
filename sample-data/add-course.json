@@ -1,0 +1,78 @@
+{
+    "title": "JavaScript Essentials",
+    "description": "An in-depth course on JavaScript",
+    "maxStudents": 100,
+    "category": "671f582a856800809d75f70e", 
+    "duration": "6 weeks",
+    "price": 49.99,
+    "modules": [
+        {
+            "title": "Introduction to JavaScript",
+            "lessons": [
+                {
+                    "title": "JavaScript Basics",
+                    "content": "Introduction to the basics of JavaScript",
+                    "multimedia": [
+                        {
+                            "url": "https://example.com/js-basics-video.mp4",
+                            "type": "video"
+                        }
+                    ],
+                    "subLessons": [
+                        {
+                            "title": "Variables in JavaScript",
+                            "content": "Overview of variables in JavaScript",
+                            "multimedia": [
+                                {
+                                    "url": "https://example.com/js-variables-image.png",
+                                    "type": "image"
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Data Types",
+                            "content": "Understanding data types in JavaScript"
+                        }
+                    ]
+                },
+                {
+                    "title": "JavaScript Functions",
+                    "content": "Deep dive into functions in JavaScript",
+                    "multimedia": [
+                        {
+                            "url": "https://example.com/js-functions-pdf.pdf",
+                            "type": "pdf"
+                        }
+                    ]
+                }
+            ],
+            "quizzes": [
+                {
+                    "title": "Introductory Quiz",
+                    "duration": 10,
+                    "questions": [
+                        {
+                            "question": "What is a variable?",
+                            "options": ["A type of data", "A placeholder for data", "A function"],
+                            "correctAnswer": "A placeholder for data"
+                        },
+                        {
+                            "question": "Which of the following is a JavaScript data type?",
+                            "options": ["String", "Class", "HTML"],
+                            "correctAnswer": "String"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Advanced JavaScript",
+            "lessons": [
+                {
+                    "title": "Closures and Scope",
+                    "content": "Detailed look at closures and scope in JavaScript"
+                }
+            ]
+        }
+    ]
+}

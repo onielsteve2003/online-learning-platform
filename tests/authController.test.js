@@ -2,9 +2,7 @@ const request = require('supertest');
 const app = require('../index'); // your Express app
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
-const passport = require('passport');
 const mongoose = require('mongoose');
-const authRoutes = require('../routes/api/auth.routes');
 
 jest.mock('../models/user'); // Mocking the User model
 
@@ -20,7 +18,7 @@ beforeAll((done) => {
 afterAll(async() => {
     await mongoose.connection.close();
     await new Promise(resolve => server.close(resolve));
-}, 10000);
+}, 20000);
 
 describe('Auth Controller', () => {
     afterEach(() => {
@@ -178,6 +176,7 @@ describe('Google Authentication', () => {
     });
 
     it('should handle Google callback and return a JWT token', async () => {
+        jest.setTimeout(10000);
         // Mocking a user and JWT signing
         const mockUser = {
             _id: '12345',

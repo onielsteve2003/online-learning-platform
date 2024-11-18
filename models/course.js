@@ -1,12 +1,26 @@
 const mongoose = require('mongoose');
-const { Schema } = mongoose
+const { Schema } = mongoose;
 
-const courseSchema = new Schema({
+// Quiz Schema
+const quizSchema = new Schema({
     title: {
         type: String,
         required: true
     },
-    description: {
+    questions: [{
+        question: String,
+        options: [String],
+        correctAnswer: String
+    }],
+    duration: {
+        type: Number, // Duration in minutes
+        required: true
+    }
+});
+
+// Lesson Schema with support for nested sub-lessons
+const lessonSchema = new Schema({
+    title: {
         type: String,
         required: true
     },
@@ -25,17 +39,39 @@ const courseSchema = new Schema({
             required: true
         }
     }],
+    subLessons: [this],
+    quizzes: [quizSchema]
+});
+
+// Module Schema
+const moduleSchema = new Schema({
+    title: {
+        type: String,
+        required: true
+    },
+    lessons: [lessonSchema],
+    quizzes: [quizSchema]
+});
+
+// Course Schema
+const courseSchema = new Schema({
+    title: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
     instructor: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    students: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        }
-    ],
+    students: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        status: { type: String, enum: ['paid', 'pending'], default: 'pending' }
+    }],
     maxStudents: {
         type: Number,
         default: 100
@@ -49,10 +85,20 @@ const courseSchema = new Schema({
         type: String,
         required: true
     },
+    modules: [moduleSchema],
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    // allowRefund: {
+    //     type: Boolean,
+    //     default: false
+    // },
     createdAt: {
         type: Date,
         default: Date.now
     }
-})
+});
 
-module.exports = mongoose.model('Course', courseSchema);
+module.exports = mongoose.models.Course || mongoose.model('Course', courseSchema);

@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/user')
+const User = require('../models/user');
+const Course = require('../models/course');
 
-// Protect routes
+// Middleware to protect routes
 const protect = async (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
@@ -11,16 +12,13 @@ const protect = async (req, res, next) => {
     }
 
     try {
-        // Verify Token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Fetch user by decoded userId
         const userAcc = await User.findById(decoded.userId);
+
         if (!userAcc || userAcc.suspended || userAcc.deleted) {
             return res.status(401).json({ code: 401, message: 'Unauthorized user' });
         }
 
-        // Attach user to request object
         req.user = userAcc;
         next();
     } catch (err) {
@@ -29,5 +27,29 @@ const protect = async (req, res, next) => {
     }
 };
 
-module.exports = protect;
+// Middleware to verify course access
+const verifyCourseAccess = async (req, res, next) => {
+    const { courseId } = req.params;
+    const userId = req.user._id;
+
+    try {
+        const course = await Course.findById(courseId).populate('students instructor');
+        if (!course) return res.status(404).json({ code: 404, message: 'Course not found' });
+
+        if (course.instructor.toString() === userId.toString() || course.students.some(s => s.user.toString() === userId.toString() && s.status === 'paid')) {
+            return next();
+        }
+
+        return res.status(403).json({ code: 403, message: 'Access denied. Payment required.' });
+    } catch (error) {
+        res.status(500).json({ code: 500, message: 'Access verification error', error: error.message });
+    }
+};
+
+module.exports = {
+    protect, 
+    verifyCourseAccess
+};
+
+
 

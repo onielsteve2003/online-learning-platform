@@ -30,7 +30,12 @@ const userSchema = new Schema({
     facebookId: {
         type: String,
         default: null
-    }
+    },
+    purchasedCourses: [{
+        course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        paymentStatus: { type: String, enum: ['success', 'failed', 'pending'], default: 'pending' },
+        reference: String
+    }]
 }, {timestamps: true})
 
 // Password hashing middleware
@@ -47,4 +52,4 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 }
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
